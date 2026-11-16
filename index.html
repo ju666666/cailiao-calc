@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>自建房材料账 · 混凝土与砂浆计算器（原型）</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --accent:#cf4d06; --accent-strong:#a83e04; --accent-soft:#fdf1e7; --accent-line:#f3c9a8;
+    --ink:#1a2230; --muted:#68707c; --faint:#98a0ab;
+    --bg:#f3f4f1; --card:#ffffff; --line:#e4e7e2; --field:#fbfcfb;
+    --panel:#161e29; --panel-cell:rgba(255,255,255,.06); --panel-line:rgba(255,255,255,.12);
+    --panel-ink:#f4f7fa; --panel-muted:#95a3b5; --panel-num:#ffb37a;
+    --good:#1e7d46; --good-bg:#e8f6ed; --good-line:#bfe6cd;
+    --warn:#c2570a; --warn-bg:#fdf1e7;
+    --shadow:0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.04);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --accent:#f0762a; --accent-strong:#f0762a; --accent-soft:#2c1e12; --accent-line:#5a3a20;
+      --ink:#edf1f6; --muted:#9aa5b1; --faint:#6e7987;
+      --bg:#0f1319; --card:#1a202a; --line:#2a323f; --field:#141a22;
+      --panel:#0a0e14; --panel-cell:rgba(255,255,255,.05); --panel-line:rgba(255,255,255,.12);
+      --good:#4cc38a; --good-bg:#12291d; --good-line:#1f4632;
+      --warn:#f5a05a; --warn-bg:#2c1e12;
+      --shadow:0 1px 2px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",sans-serif;
+    background:var(--bg); color:var(--ink); font-size:15px; line-height:1.55;}
+  .wrap{max-width:600px; margin:0 auto; padding:22px 16px 48px;}
+
+  /* ---------- 页头 ---------- */
+  header{padding:2px 2px 2px;}
+  h1{font-size:24px; font-weight:800; letter-spacing:.01em; margin:0 0 6px; display:flex; align-items:center; flex-wrap:wrap; gap:8px;}
+  .sub{color:var(--muted); font-size:13.5px; margin:0; max-width:34em;}
+  .badge{display:inline-block; background:var(--accent-soft); color:var(--accent-strong); border:1px solid var(--accent-line);
+    font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; vertical-align:2px;}
+
+  /* ---------- 模块切换 ---------- */
+  .tabs{display:flex; gap:4px; margin:18px 0 14px; padding:4px; background:var(--line);
+    border-radius:14px; background:color-mix(in srgb, var(--line) 55%, var(--bg));}
+  .tab{font:inherit; flex:1; padding:12px 0; min-height:48px; display:flex; align-items:center; justify-content:center;
+    text-align:center; border-radius:10px; border:1px solid transparent;
+    background:transparent; color:var(--muted); font-size:16px; font-weight:600; cursor:pointer;}
+  .tab.on{background:var(--card); border-color:var(--line); color:var(--ink); box-shadow:var(--shadow);}
+
+  /* ---------- 卡片与表单 ---------- */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow);
+    padding:18px 16px; margin-bottom:14px;}
+  .card h2{font-size:15.5px; font-weight:700; margin:0 0 12px; color:var(--ink);}
+  .card h2 .hint{font-weight:400; color:var(--muted); font-size:12.5px; margin-left:6px;}
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  .field{flex:1 1 30%; min-width:96px;}
+  .field label{display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:5px;}
+  .field input, .field select{width:100%; padding:11px 12px; min-height:46px; font-size:16px; font-variant-numeric:tabular-nums;
+    border:1px solid var(--line); border-radius:10px; background:var(--field); color:var(--ink);}
+  .field input:focus, .field select:focus{outline:2px solid var(--accent-line); border-color:var(--accent);}
+  .seg{display:flex; gap:6px; margin-bottom:12px;}
+  .seg button{flex:1; padding:10px 0; min-height:44px; border-radius:10px; border:1px solid var(--line); background:var(--card);
+    color:var(--muted); font-size:14px; cursor:pointer;}
+  .seg button.on{background:var(--accent-soft); border-color:var(--accent); color:var(--accent-strong); font-weight:600;}
+  .grades{display:flex; gap:6px;}
+  .grades button{flex:1; padding:10px 0; min-height:46px; border-radius:10px; border:1px solid var(--line); background:var(--card);
+    color:var(--ink); font-size:15px; font-weight:600; cursor:pointer;}
+  .grades button.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  /* ---------- 结果面板（深色显示区） ---------- */
+  .card.result{background:var(--panel); border-color:var(--panel); color:var(--panel-ink);}
+  .card.result h2{color:var(--panel-ink);}
+  .card.result h2 .hint{color:var(--panel-muted);}
+  .big{display:flex; gap:10px; text-align:center; margin:2px 0 10px;}
+  .big .cell{flex:1; background:var(--panel-cell); border:1px solid var(--panel-line); border-radius:12px; padding:14px 4px 11px;}
+  .big .num{font-size:32px; font-weight:800; color:var(--panel-ink); line-height:1.15; font-variant-numeric:tabular-nums; letter-spacing:.01em;}
+  .big .cell:first-child .num{color:var(--panel-num);}
+  .big .cap{font-size:12px; color:var(--panel-muted); margin-top:3px;}
+  table{width:100%; border-collapse:collapse; font-size:13.5px; font-variant-numeric:tabular-nums;}
+  th,td{padding:7px 4px; border-bottom:1px solid var(--line); text-align:right;}
+  th:first-child, td:first-child{text-align:left;}
+  th{color:var(--muted); font-weight:500;}
+  .card.result th,.card.result td{border-bottom-color:var(--panel-line);}
+  .card.result th{color:var(--panel-muted);}
+  .card.result tr:last-child td{border-bottom:none;}
+
+  /* ---------- 清单与按钮 ---------- */
+  .listbox{background:var(--field); border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+    font-size:14.5px; line-height:1.65; margin-bottom:10px;}
+  .btn{display:block; width:100%; padding:13px 0; min-height:50px; border:none; border-radius:12px; background:var(--accent);
+    color:#fff; font-size:16px; font-weight:600; cursor:pointer;}
+  .btn:active{background:var(--accent-strong);}
+  .btn.ghost{background:var(--card); color:var(--accent-strong); border:1px solid var(--accent);}
+
+  /* ---------- 比价 ---------- */
+  .vs{display:flex; gap:10px; text-align:center;}
+  .vs .cell{flex:1; background:var(--field); border:1px solid var(--line); border-radius:12px; padding:14px 4px 11px;}
+  .vs .num{font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.2;}
+  .vs .cap{font-size:12px; color:var(--muted); margin-top:3px;}
+  .verdict{margin-top:12px; font-size:14.5px; font-weight:600; background:var(--good-bg); border:1px solid var(--good-line);
+    color:var(--ink); border-radius:12px; padding:11px 14px;}
+  .note{font-size:12.5px; color:var(--muted);}
+  .warnline{font-size:13px; color:var(--warn); background:var(--warn-bg); border-radius:8px; padding:8px 10px; margin-top:10px;}
+
+  /* ---------- 系数表 / 页脚 ---------- */
+  details{margin-top:2px;}
+  summary{cursor:pointer; font-size:14.5px; font-weight:600; padding:6px 0; min-height:36px;}
+  .src{font-size:11.5px; color:var(--muted);}
+  footer{color:var(--muted); font-size:12.5px; padding:4px 2px;}
+  .hidden{display:none;}
+
+  @media (min-width:640px){
+    .wrap{padding-top:32px;}
+    .big .num{font-size:36px;}
+    .card{padding:20px 20px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>自建房材料账<span class="badge">原型 v0.2</span></h1>
+    <p class="sub">混凝土和砂浆备料一次算清：袋数、吨数、含水修正、自拌与商砼全本账。全部在本机计算，不上传。</p>
+  </header>
+
+  <div class="tabs">
+    <button type="button" class="tab on" id="tabConc">混凝土账</button>
+    <button type="button" class="tab" id="tabMortar">砂浆账</button>
+  </div>
+
+  <!-- ============ 混凝土 ============ -->
+  <section id="panelConc">
+    <div class="card">
+      <h2>浇筑参数</h2>
+      <div class="seg" id="volModeSeg">
+        <button data-m="dims" class="on">按长 × 宽 × 厚</button>
+        <button data-m="direct">直接填方量</button>
+      </div>
+      <div class="row" id="dimsRow">
+        <div class="field"><label for="inL">长（米）</label><input type="number" id="inL" value="10" step="0.1" min="0"></div>
+        <div class="field"><label for="inW">宽（米）</label><input type="number" id="inW" value="4" step="0.1" min="0"></div>
+        <div class="field"><label for="inT">厚（米）</label><input type="number" id="inT" value="0.12" step="0.01" min="0"></div>
+      </div>
+      <div class="row hidden" id="directRow">
+        <div class="field"><label for="inVol">净方量（m³，不含损耗）</label><input type="number" id="inVol" value="4.8" step="0.1" min="0"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label>强度等级</label>
+          <div class="grades" id="gradeSeg">
+            <button data-g="C20">C20</button>
+            <button data-g="C25" class="on">C25</button>
+            <button data-g="C30">C30</button>
+            <button data-g="C35">C35</button>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label for="inLoss">损耗（%）</label><input type="number" id="inLoss" value="3" step="0.5" min="0" max="30"></div>
+        <div class="field"><label for="inMoist">砂含水率（%）</label><input type="number" id="inMoist" value="0" step="0.5" min="0" max="20"></div>
+      </div>
+      <p class="note">损耗参考：地面摊垫 2%–3%，坑槽、转运洒落多取 5%–8%。砂含水率：雨后露天堆砂常达 5%–8%，填了会自动多称湿砂、并从拌合水里扣掉砂带进的水。</p>
+    </div>
+
+    <div class="card result">
+      <h2>备料用量<span class="hint" id="concSummary"></span></h2>
+      <div class="big">
+        <div class="cell"><div class="num" id="outBags">–</div><div class="cap">水泥（袋）</div></div>
+        <div class="cell"><div class="num" id="outSand">–</div><div class="cap">砂（吨）</div></div>
+        <div class="cell"><div class="num" id="outGravel">–</div><div class="cap">石子（吨）</div></div>
+      </div>
+      <table>
+        <tr><th>材料</th><th>每 m³ 用量</th><th>本单总量</th><th>说明</th></tr>
+        <tr><td>水泥（42.5）</td><td id="tCemM3">–</td><td id="tCemTot">–</td><td id="tCemNote">–</td></tr>
+        <tr><td>砂（中砂）</td><td id="tSandM3">–</td><td id="tSandTot">–</td><td id="tSandNote">–</td></tr>
+        <tr><td>石子（碎石）</td><td id="tGravM3">–</td><td id="tGravTot">–</td><td>—</td></tr>
+        <tr><td>水</td><td id="tWaterM3">–</td><td id="tWaterTot">–</td><td id="tWaterNote">–</td></tr>
+      </table>
+      <p class="warnline hidden" id="moistWarn"></p>
+    </div>
+
+    <div class="card">
+      <h2>备料清单<span class="hint">复制后照着念给料场</span></h2>
+      <div class="listbox" id="concListText"></div>
+      <button class="btn" id="btnCopyConc">复制清单</button>
+    </div>
+
+    <div class="card">
+      <h2>自拌 vs 商砼 · 全本账</h2>
+      <div class="row">
+        <div class="field"><label for="pReady">商砼方价（元/m³）</label><input type="number" id="pReady" value="450" step="5" min="0"></div>
+        <div class="field"><label for="pMinOrder">商砼起订量（m³）</label><input type="number" id="pMinOrder" value="5" step="0.5" min="0"></div>
+        <div class="field"><label for="pTransport">运费（元/单）</label><input type="number" id="pTransport" value="0" step="10" min="0"></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="field"><label for="pPump">泵送费（元/单）</label><input type="number" id="pPump" value="0" step="10" min="0"></div>
+        <div class="field"><label for="pCemBag">水泥（元/袋）</label><input type="number" id="pCemBag" value="28" step="0.5" min="0"></div>
+        <div class="field"><label for="pSandT">砂（元/吨）</label><input type="number" id="pSandT" value="120" step="5" min="0"></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="field"><label for="pGravT">石子（元/吨）</label><input type="number" id="pGravT" value="135" step="5" min="0"></div>
+        <div class="field"><label for="pLabor">自拌人工（元/m³）</label><input type="number" id="pLabor" value="80" step="5" min="0"></div>
+        <div class="field"><label for="pEquip">设备电费折旧（元/m³）</label><input type="number" id="pEquip" value="15" step="1" min="0"></div>
+      </div>
+      <div class="vs" style="margin-top:12px;">
+        <div class="cell"><div class="num" id="costReady">–</div><div class="cap">商砼总价</div></div>
+        <div class="cell"><div class="num" id="costSelf">–</div><div class="cap">自拌总价</div></div>
+      </div>
+      <p class="note" id="readyBillNote" style="margin-top:8px;"></p>
+      <div class="verdict" id="vsVerdict"></div>
+      <p class="note">价格是示例价（与竞品同口径方便对比），请改成你当地的价。商砼侧算了起订量、运费、泵送；自拌侧算了材料、人工和搅拌机折旧电费——两边都算全，才比得出真盈亏平衡点。</p>
+    </div>
+
+    <div class="card">
+      <h2>方量反推<span class="hint">一车商砼能打多大</span></h2>
+      <div class="row">
+        <div class="field"><label for="inTruck">一车方量（m³）</label><input type="number" id="inTruck" value="8" step="0.5" min="0"></div>
+        <div class="field"><label for="inArea">地面面积（㎡）</label><input type="number" id="inArea" value="60" step="1" min="0"></div>
+        <div class="field"><label for="inSlab">板厚（mm）</label><input type="number" id="inSlab" value="120" step="5" min="0"></div>
+      </div>
+      <p style="margin:10px 0 0;" id="reverseOut"></p>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>配合比系数表（可改）</summary>
+        <p class="src">当前等级每 m³ 用量（kg）。默认值已于 2026-11-16 与多来源公开配合比表逐项对账，均落在公开区间内（重量法、中砂、42.5 水泥）；用水 175 kg 为自拌低坍落度口径，大坍落度/泵送以试配为准。你按本地工长口径或试配结果改完即生效，刷新页面恢复默认。</p>
+        <div class="row">
+          <div class="field"><label for="cCem">水泥 kg</label><input type="number" id="cCem" step="1" min="0"></div>
+          <div class="field"><label for="cSand">砂 kg（干）</label><input type="number" id="cSand" step="1" min="0"></div>
+          <div class="field"><label for="cGrav">石子 kg</label><input type="number" id="cGrav" step="1" min="0"></div>
+          <div class="field"><label for="cWater">水 kg</label><input type="number" id="cWater" step="1" min="0"></div>
+        </div>
+        <p class="note" id="wcOut"></p>
+        <button class="btn ghost" id="btnResetCoef" style="margin-top:6px;">恢复经验值</button>
+      </details>
+    </div>
+  </section>
+
+  <!-- ============ 砂浆 ============ -->
+  <section id="panelMortar" class="hidden">
+    <div class="card">
+      <h2>砂浆参数</h2>
+      <div class="seg" id="mortarModeSeg">
+        <button data-m="plaster" class="on">抹灰</button>
+        <button data-m="masonry">砌筑</button>
+      </div>
+      <div class="row" id="plasterRow">
+        <div class="field"><label for="mArea">抹灰面积（㎡）</label><input type="number" id="mArea" value="100" step="1" min="0"></div>
+        <div class="field"><label for="mThick">抹灰厚度（mm）</label><input type="number" id="mThick" value="15" step="1" min="0"></div>
+      </div>
+      <div class="row hidden" id="masonryRow">
+        <div class="field"><label for="mWallVol">砖墙体积（m³）</label><input type="number" id="mWallVol" value="10" step="0.5" min="0"></div>
+        <div class="field"><label for="mFrac">砂浆占比</label><input type="number" id="mFrac" value="0.23" step="0.01" min="0" max="0.6"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label>配比 / 等级</label>
+          <div class="grades" id="mortarGradeSeg"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label for="mLoss">损耗（%）</label><input type="number" id="mLoss" value="10" step="1" min="0" max="40"></div>
+      </div>
+      <p class="note" id="mortarModeNote">抹灰：砂浆量 = 面积 × 厚度，配比为体积比。砌筑：砂浆量 ≈ 砖墙体积 × 0.23（一砖标准砖墙口径，可改）。砂浆系数按 32.5 级水泥口径，用 42.5 水泥强度有富余。用水量现场按稠度加，不列入备料。</p>
+    </div>
+
+    <div class="card result">
+      <h2>备料用量<span class="hint" id="mortarSummary"></span></h2>
+      <div class="big">
+        <div class="cell"><div class="num" id="mOutBags">–</div><div class="cap">水泥（袋）</div></div>
+        <div class="cell"><div class="num" id="mOutSand">–</div><div class="cap">砂（吨）</div></div>
+        <div class="cell"><div class="num" id="mOutVol">–</div><div class="cap">砂浆（m³）</div></div>
+      </div>
+      <table>
+        <tr><th>材料</th><th>每 m³ 砂浆</th><th>本单总量</th></tr>
+        <tr><td>水泥</td><td id="mTCemM3">–</td><td id="mTCemTot">–</td></tr>
+        <tr><td>砂</td><td id="mTSandM3">–</td><td id="mTSandTot">–</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>备料清单<span class="hint">复制后照着念给料场</span></h2>
+      <div class="listbox" id="mortarListText"></div>
+      <button class="btn" id="btnCopyMortar">复制清单</button>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>砂浆系数表（可改）</summary>
+        <p class="src">当前配比每 m³ 砂浆用量（kg）。默认值已于 2026-11-16 按定额与 JGJ 98 配合比表对账：水泥按 32.5 级口径，砂按中砂干堆积密度口径（本地砂不同，主要改砂量这一项）。改完即生效，刷新页面恢复默认。</p>
+        <div class="row">
+          <div class="field"><label for="mcCem">水泥 kg</label><input type="number" id="mcCem" step="1" min="0"></div>
+          <div class="field"><label for="mcSand">砂 kg</label><input type="number" id="mcSand" step="1" min="0"></div>
+        </div>
+        <button class="btn ghost" id="btnResetMortarCoef" style="margin-top:8px;">恢复参考值</button>
+      </details>
+    </div>
+  </section>
+
+  <footer>
+    <p>参考配比仅用于估算备料：结构承重浇筑以设计图纸为准，实际施工配合比以试验室试配为准。全部系数已于 2026-11-16 与公开定额/规程逐项对账，仍属估算参考；价格为示例价，请按当地行情修改。</p>
+  </footer>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const num = id => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+const r0 = v => Math.round(v).toLocaleString("zh-CN");
+const f2 = v => (Math.round(v * 100) / 100).toFixed(2);
+const money = v => "¥" + f2(v);
+
+/* ---------- Tabs ---------- */
+$("tabConc").onclick = () => switchTab(true);
+$("tabMortar").onclick = () => switchTab(false);
+function switchTab(conc){
+  $("tabConc").classList.toggle("on", conc);
+  $("tabMortar").classList.toggle("on", !conc);
+  $("panelConc").classList.toggle("hidden", !conc);
+  $("panelMortar").classList.toggle("hidden", conc);
+}
+
+/* ---------- 混凝土 ---------- */
+const CONC_DEFAULTS = {
+  C20:{cem:300, sand:685, grav:1226, water:175},
+  C25:{cem:350, sand:650, grav:1200, water:175},
+  C30:{cem:400, sand:620, grav:1180, water:175},
+  C35:{cem:450, sand:590, grav:1160, water:175}
+};
+let concCoef = JSON.parse(JSON.stringify(CONC_DEFAULTS));
+let curGrade = "C25";
+let volMode = "dims";
+
+$("volModeSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+  volMode = b.dataset.m;
+  $("volModeSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  $("dimsRow").classList.toggle("hidden", volMode !== "dims");
+  $("directRow").classList.toggle("hidden", volMode !== "direct");
+  calcConc();
+});
+$("gradeSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+  curGrade = b.dataset.g;
+  $("gradeSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  syncCoefInputs(); calcConc();
+});
+function syncCoefInputs(){
+  const c = concCoef[curGrade];
+  $("cCem").value = c.cem; $("cSand").value = c.sand; $("cGrav").value = c.grav; $("cWater").value = c.water;
+}
+["cCem","cSand","cGrav","cWater"].forEach(id => $(id).addEventListener("input", () => {
+  concCoef[curGrade] = { cem:num("cCem"), sand:num("cSand"), grav:num("cGrav"), water:num("cWater") };
+  calcConc();
+}));
+$("btnResetCoef").onclick = () => {
+  concCoef[curGrade] = JSON.parse(JSON.stringify(CONC_DEFAULTS[curGrade]));
+  syncCoefInputs(); calcConc();
+};
+
+function concTotals(netV){
+  const loss = num("inLoss"), moist = num("inMoist"), c = concCoef[curGrade];
+  const V = netV * (1 + loss / 100);
+  const cemKg = c.cem * V, bags = Math.ceil(cemKg / 50);
+  const sandDry = c.sand * V, sandWet = sandDry * (1 + moist / 100);
+  const waterFromSand = sandDry * moist / 100;
+  const gravKg = c.grav * V;
+  const waterBase = c.water * V;
+  const mixWater = Math.max(waterBase - waterFromSand, 0);
+  return { V, cemKg, bags, sandDry, sandWet, waterFromSand, gravKg, waterBase, mixWater };
+}
+function costSplit(netV){
+  const t = concTotals(netV);
+  const billed = Math.max(t.V, num("pMinOrder"));
+  const ready = num("pReady") * billed + num("pTransport") + num("pPump");
+  const self = t.bags * num("pCemBag") + (t.sandWet / 1000) * num("pSandT")
+             + (t.gravKg / 1000) * num("pGravT") + (num("pLabor") + num("pEquip")) * t.V;
+  return { t, billed, ready, self };
+}
+function breakeven(){
+  let prevV = 0.5, prevD = costSplit(prevV).ready - costSplit(prevV).self;
+  if (Math.abs(prevD) < 0.01) return { v: prevV, selfCheaperBelow: true };
+  for (let v = 0.6; v <= 40.001; v += 0.1){
+    const d = costSplit(v).ready - costSplit(v).self;
+    if ((prevD > 0 && d <= 0) || (prevD < 0 && d >= 0))
+      return { v: Math.round(v * 10) / 10, selfCheaperBelow: prevD > 0 };
+    prevV = v; prevD = d;
+  }
+  return null;
+}
+
+function calcConc(){
+  const netV = volMode === "dims" ? num("inL") * num("inW") * num("inT") : num("inVol");
+  const c = concCoef[curGrade], moist = num("inMoist");
+  const { t, billed, ready, self } = costSplit(netV);
+  const wc = c.cem > 0 ? (c.water / c.cem).toFixed(2) : "–";
+
+  $("concSummary").textContent = curGrade + " · 水灰比 " + wc;
+  $("outBags").textContent = t.bags;
+  $("outSand").textContent = f2(t.sandWet / 1000);
+  $("outGravel").textContent = f2(t.gravKg / 1000);
+  $("tCemM3").textContent = r0(c.cem) + " kg"; $("tCemTot").textContent = "约 " + r0(t.cemKg) + " kg";
+  $("tCemNote").textContent = t.bags + " 袋 × 50kg";
+  $("tSandM3").textContent = r0(c.sand) + " kg（干）"; $("tSandTot").textContent = "约 " + f2(t.sandWet / 1000) + " 吨";
+  $("tSandNote").textContent = moist > 0 ? "含水 " + moist + "% 按湿砂称" : "干砂口径";
+  $("tGravM3").textContent = r0(c.grav) + " kg"; $("tGravTot").textContent = "约 " + f2(t.gravKg / 1000) + " 吨";
+  $("tWaterM3").textContent = r0(c.water) + " kg"; $("tWaterTot").textContent = "约 " + r0(t.mixWater) + " kg";
+  $("tWaterNote").textContent = moist > 0 ? "已扣砂带入水 " + r0(t.waterFromSand) + " kg" : "水灰比 " + wc;
+  $("wcOut").textContent = "当前水灰比 " + wc + "（水 ÷ 水泥）。决定强度的第一因素是水灰比，不是水泥越多越好。";
+
+  const warn = $("moistWarn");
+  if (t.waterFromSand > t.waterBase && t.waterBase > 0){
+    warn.textContent = "注意：砂带进的水已超过配比用水，拌合水按 0 计——砂太湿了，先晾一晾或再核对含水率。";
+    warn.classList.remove("hidden");
+  } else warn.classList.add("hidden");
+
+  let list = curGrade + " 混凝土备料：净方量 " + f2(netV) + " m³（含损耗共 " + f2(t.V) + " m³）——水泥 "
+    + t.bags + " 袋（约 " + r0(t.cemKg) + " 公斤）、砂 " + f2(t.sandWet / 1000) + " 吨、石子 "
+    + f2(t.gravKg / 1000) + " 吨、拌合水约 " + r0(t.mixWater) + " 公斤。";
+  if (moist > 0) list += "砂按含水 " + moist + "% 称湿砂，拌合水已扣砂带入的水。";
+  list += "参考配比，结构承重以设计图纸为准。";
+  $("concListText").textContent = list;
+
+  $("costReady").textContent = money(ready);
+  $("costSelf").textContent = money(self);
+  $("readyBillNote").textContent = billed > t.V
+    ? "商砼按起订量 " + f2(billed) + " m³ 计费（本单含损耗 " + f2(t.V) + " m³，不足起订量）。"
+    : "商砼按本单含损耗方量 " + f2(t.V) + " m³ 计费。";
+  const diff = self - ready;
+  let verdict = diff > 0
+    ? "本单结论：商砼约省 " + r0(diff) + " 元。"
+    : diff < 0 ? "本单结论：自拌约省 " + r0(-diff) + " 元。" : "本单结论：两边基本一样。";
+  const be = breakeven();
+  if (be) verdict += "按当前价格，盈亏平衡点约在净方量 " + f2(be.v) + " m³："
+    + (be.selfCheaperBelow ? "小于它自拌划算，大于它商砼划算。" : "小于它商砼划算，大于它自拌划算。");
+  else verdict += "在 0.5–40 m³ 范围内按当前价格一边一直更划算，没有平衡点。";
+  $("vsVerdict").textContent = verdict;
+
+  const truck = num("inTruck"), area = num("inArea"), slab = num("inSlab");
+  if (truck > 0 && area > 0 && slab > 0){
+    const thickMm = truck / area * 1000;
+    const cover = truck / (slab / 1000);
+    const loads = Math.ceil(t.V / truck);
+    $("reverseOut").textContent = "一车 " + f2(truck) + " m³ 摊在 " + r0(area) + " ㎡ 上厚约 " + Math.round(thickMm)
+      + " mm；按 " + Math.round(slab) + " mm 板厚，一车约铺 " + f2(cover) + " ㎡。本单共需约 " + loads + " 车。";
+  } else $("reverseOut").textContent = "";
+}
+["inL","inW","inT","inVol","inLoss","inMoist","pReady","pMinOrder","pTransport","pPump",
+ "pCemBag","pSandT","pGravT","pLabor","pEquip","inTruck","inArea","inSlab"]
+ .forEach(id => $(id).addEventListener("input", calcConc));
+
+/* ---------- 砂浆 ---------- */
+const MORTAR_DEFAULTS = {
+  plaster: { "1:2.5":{cem:520, sand:1550}, "1:3":{cem:420, sand:1600}, "1:4":{cem:330, sand:1650} },
+  masonry: { "M5":{cem:200, sand:1450}, "M7.5":{cem:240, sand:1450}, "M10":{cem:280, sand:1450} }
+};
+let mortarCoef = JSON.parse(JSON.stringify(MORTAR_DEFAULTS));
+let mortarMode = "plaster";
+let mortarPreset = { plaster:"1:3", masonry:"M7.5" };
+
+function buildMortarGrades(){
+  const seg = $("mortarGradeSeg"); seg.innerHTML = "";
+  Object.keys(MORTAR_DEFAULTS[mortarMode]).forEach(k => {
+    const b = document.createElement("button");
+    b.textContent = k; if (k === mortarPreset[mortarMode]) b.classList.add("on");
+    b.onclick = () => { mortarPreset[mortarMode] = k; buildMortarGrades(); syncMortarCoefInputs(); calcMortar(); };
+    seg.appendChild(b);
+  });
+}
+function syncMortarCoefInputs(){
+  const c = mortarCoef[mortarMode][mortarPreset[mortarMode]];
+  $("mcCem").value = c.cem; $("mcSand").value = c.sand;
+}
+$("mortarModeSeg").querySelectorAll("button").forEach(b => b.onclick = () => {
+  mortarMode = b.dataset.m;
+  $("mortarModeSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  $("plasterRow").classList.toggle("hidden", mortarMode !== "plaster");
+  $("masonryRow").classList.toggle("hidden", mortarMode !== "masonry");
+  buildMortarGrades(); syncMortarCoefInputs(); calcMortar();
+});
+["mcCem","mcSand"].forEach(id => $(id).addEventListener("input", () => {
+  mortarCoef[mortarMode][mortarPreset[mortarMode]] = { cem:num("mcCem"), sand:num("mcSand") };
+  calcMortar();
+}));
+$("btnResetMortarCoef").onclick = () => {
+  mortarCoef[mortarMode][mortarPreset[mortarMode]] =
+    JSON.parse(JSON.stringify(MORTAR_DEFAULTS[mortarMode][mortarPreset[mortarMode]]));
+  syncMortarCoefInputs(); calcMortar();
+};
+
+function calcMortar(){
+  const key = mortarPreset[mortarMode], c = mortarCoef[mortarMode][key];
+  const base = mortarMode === "plaster" ? num("mArea") * num("mThick") / 1000 : num("mWallVol") * num("mFrac");
+  const V = base * (1 + num("mLoss") / 100);
+  const cemKg = c.cem * V, bags = Math.ceil(cemKg / 50), sandKg = c.sand * V;
+
+  $("mortarSummary").textContent = (mortarMode === "plaster" ? "抹灰 " : "砌筑 ") + key;
+  $("mOutBags").textContent = bags;
+  $("mOutSand").textContent = f2(sandKg / 1000);
+  $("mOutVol").textContent = f2(V);
+  $("mTCemM3").textContent = r0(c.cem) + " kg"; $("mTCemTot").textContent = "约 " + r0(cemKg) + " kg（" + bags + " 袋）";
+  $("mTSandM3").textContent = r0(c.sand) + " kg"; $("mTSandTot").textContent = "约 " + f2(sandKg / 1000) + " 吨";
+
+  const scene = mortarMode === "plaster"
+    ? "抹灰 " + r0(num("mArea")) + " ㎡ × " + r0(num("mThick")) + " mm"
+    : "砌筑砖墙 " + f2(num("mWallVol")) + " m³";
+  $("mortarListText").textContent = "砂浆备料（" + key + "）：" + scene + "，砂浆约 " + f2(V)
+    + " m³（含损耗）——水泥 " + bags + " 袋（约 " + r0(cemKg) + " 公斤）、砂 " + f2(sandKg / 1000)
+    + " 吨。用水现场按稠度加。参考配比，以试配为准。";
+}
+["mArea","mThick","mWallVol","mFrac","mLoss"].forEach(id => $(id).addEventListener("input", calcMortar));
+
+/* ---------- 复制 ---------- */
+function copyText(text, btn){
+  const done = () => { const old = btn.textContent; btn.textContent = "已复制，去料场照着念"; setTimeout(() => btn.textContent = old, 1600); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch(e) {}
+  document.body.removeChild(ta);
+}
+$("btnCopyConc").onclick = () => copyText($("concListText").textContent, $("btnCopyConc"));
+$("btnCopyMortar").onclick = () => copyText($("mortarListText").textContent, $("btnCopyMortar"));
+
+/* ---------- 初始化 ---------- */
+syncCoefInputs(); calcConc();
+buildMortarGrades(); syncMortarCoefInputs(); calcMortar();
+</script>
+</body>
+</html>
